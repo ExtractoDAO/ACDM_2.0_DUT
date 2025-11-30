@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>ΛCDM 2.0 + DUT | Global Cosmology Dashboard</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Tailwind CSS -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Three.js for 3D -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+
+        :root {
+
+            --glass-bg: rgba(255,255,255,0.08);
+
+            --glass-border: rgba(255,255,255,0.15);
+
+            --primary-color: #38bdf8; /* Sky Blue 400 */
+
+        }
+
+        body {
+
+            background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+
+            color: #e5e7eb;
+
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+
+            transition: all 0.5s;
+
+        }
+
+        .glass {
+
+            background: var(--glass-bg);
+
+            backdrop-filter: blur(15px);
+
+            border: 1px solid var(--glass-border);
+
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+
+        }
+
+        .metric-glow { 
+
+            text-shadow: 0 0 15px var(--primary-color), 0 0 30px rgba(56, 189, 248, 0.6);
+
+        }
+
+        .processing {
+
+            filter: grayscale(100%);
+
+            opacity: 0.7;
+
+        }
+
+        #abm_canvas {
+
+            min-height: 300px; /* Increased for better 3D visualization */
+
+            background-color: rgba(15,23,42,0.92);
+
+        }
+
+        /* Ensure the Chart.js canvas fills its container */
+
+        .h-56 > canvas {
+
+            height: 100% !important;
+
+            width: 100% !important;
+
+        }
+
+    </style>
+
+</head>
+
+<body class="min-h-screen p-4 md:p-8">
+
+    
+
+    <!-- HEADER -->
+
+    <header class="max-w-7xl mx-auto mb-8">
+
+        <div class="glass rounded-3xl p-6 md:p-8">
+
+            <div class="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+
+                <div>
+
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-black bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent mb-2">
+
+                        ΛCDM 2.0 + DUT
+
+                    </h1>
+
+                    <p class="text-lg md:text-2xl text-white/90 font-semibold">
+
+                        S₈ and H₀ Tension Resolution — Mission Dashboard (GEA)
+
+                    </p>
+
+                    <p class="text-xs md:text-sm text-sky-300 mt-2 flex items-center gap-2">
+
+                        <span id="status_indicator" class="w-3 h-3 bg-sky-400 rounded-full animate-pulse"></span>
+
+                        Global Status: <span id="global_status" class="font-bold text-sky-400">READY (DUT Calibrated)</span>
+
+                    </p>
+
+                </div>
+
+                <div class="glass px-5 py-4 rounded-2xl text-xs md:text-sm">
+
+                    <div class="flex flex-col gap-1 text-white/80">
+
+                        <!-- TARGET VALUES (FIXED) -->
+
+                        <span>H₀ Target (Recent Universe): <span class="font-bold text-sky-300">73.08 km/s/Mpc</span></span>
+
+                        <span>S₈ Target (Shear Amplitude): <span class="font-bold text-sky-300">0.774</span></span>
+
+                        <span>fσ₈(0) Target (Growth Rate): <span class="font-bold text-sky-300">0.405</span></span>
+
+                        <span>Mission Time (Simulated): <span id="mission_time" class="font-bold text-fuchsia-300">00:00:00</span></span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+
+    <main id="main_content" class="max-w-7xl mx-auto space-y-6">
+
+        
+
+        <!-- 1. VISUALIZATION BLOCK (3D + CHARTS) - HIGH PRIORITY -->
+
+        <section class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+
+            
+
+            <!-- 3D Panel and Parameters (xl:col-span-3) -->
+
+            <div class="glass rounded-3xl p-5 md:p-7 xl:col-span-3">
+
+                <!-- New Inner Grid to separate 3D Canvas from Controls -->
+
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
+
+
+
+                    <!-- Left Side: 3D Canvas and Description (3/4 width) -->
+
+                    <div class="lg:col-span-3 flex flex-col h-full">
+
+                        <h3 class="text-xl md:text-2xl font-bold text-white mb-4">
+
+                            3D Visualization: Matter Field (Simulated)
+
+                        </h3>
+
+                        <!-- Canvas for Three.js -->
+
+                        <canvas id="abm_canvas" class="w-full rounded-xl border border-white/10 flex-grow"></canvas>
+
+                        <p class="mt-2 text-[0.7rem] text-slate-100/70">
+
+                            The 3D field represents structure formation. Green = Active Growth; Purple = Suppressed/Quenched Growth (DUT Effect).
+
+                        </p>
+
+                    </div>
+
+
+
+                    <!-- Right Side: Mission Parameters (1/4 width) -->
+
+                    <div class="lg:col-span-1 border-t lg:border-t-0 lg:border-l border-white/10 pt-6 lg:pt-0 lg:pl-6">
+
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+
+                            <svg class="w-5 h-5 text-sky-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+
+                            Mission Parameters
+
+                        </h3>
+
+                        <div class="space-y-5 text-sm">
+
+                            <div>
+
+                                <!-- Omega_m slider -->
+
+                                <label class="text-xs text-white/80 block mb-1">
+
+                                    Matter Density Ω<sub>m,0</sub>
+
+                                </label>
+
+                                <input id="omega_m" type="range" min="0.25" max="0.35" step="0.005" value="0.315"
+
+                                       class="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-sky-500">
+
+                                <div class="flex justify-between mt-1 text-[0.7rem] text-slate-200/80">
+
+                                    <span>ΛCDM Limit</span>
+
+                                    <span class="font-mono text-sky-300" id="omega_val">0.315</span>
+
+                                </div>
+
+                            </div>
+
+
+
+                            <div>
+
+                                <!-- Xi slider -->
+
+                                <label class="text-xs text-white/80 block mb-1">
+
+                                    DUT Coupling Strength ξ (Screening)
+
+                                </label>
+
+                                <input id="xi" type="range" min="0.00" max="0.10" step="0.001" value="0.030"
+
+                                       class="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-fuchsia-500">
+
+                                <div class="flex justify-between mt-1 text-[0.7rem] text-slate-200/80">
+
+                                    <span>DUT Action Minimum → Maximum</span>
+
+                                    <span class="font-mono text-fuchsia-300" id="xi_val">0.030</span>
+
+                                </div>
+
+                            </div>
+
+
+
+                            <button id="run_sim"
+
+                                    class="mt-3 w-full bg-gradient-to-r from-sky-500 to-indigo-600 text-white py-3 px-6 rounded-xl font-bold shadow-2xl shadow-sky-800/50 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+
+                                <span id="run_sim_text">🚀 RUN SIMULATION</span>
+
+                            </button>
+
+                            
+
+                            <button id="export_results"
+
+                                    class="w-full bg-slate-700 text-white/80 py-2 px-6 rounded-xl font-bold transition-all duration-300 hover:bg-slate-600">
+
+                                📋 EXPORT RESULTS
+
+                            </button>
+
+
+
+                            <p class="text-[0.7rem] text-slate-100/70 mt-3 leading-snug">
+
+                                The DUT parameters modify the H(z) evolution and suppress fσ₈(z) growth in the Recent Universe.
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- H(z) and fσ₈(z) Charts - Stacked on the side or below (mobile) -->
+
+            <div class="xl:col-span-2 space-y-6">
+
+                <div class="glass rounded-2xl p-5">
+
+                    <h4 class="text-lg font-bold text-white mb-3">H(z) Evolution</h4>
+
+                    <div class="h-56">
+
+                        <canvas id="hz_chart"></canvas>
+
+                    </div>
+
+                </div>
+
+                <div class="glass rounded-2xl p-5">
+
+                    <h4 class="text-lg font-bold text-white mb-3">fσ₈(z) Growth Rate</h4>
+
+                    <div class="h-56">
+
+                        <canvas id="fs8_chart"></canvas>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- 2. METRICS BLOCK (H0, S8, fσ8) - Full width -->
+
+        <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+
+            
+
+            <!-- H0 Metric -->
+
+            <div class="glass rounded-2xl p-6 text-center flex flex-col justify-between">
+
+                <div>
+
+                    <h4 class="text-white/80 text-xs uppercase tracking-wider mb-3">H₀ (Current Expansion Rate)</h4>
+
+                    <div id="h0_val" class="text-4xl md:text-5xl font-black text-sky-400 metric-glow">--</div>
+
+                    <div class="text-[0.75rem] text-white/70 mt-2">km/s/Mpc</div>
+
+                </div>
+
+                <!-- Footer/Source -->
+
+                <div id="h0_source" class="text-[0.65rem] text-sky-300/80 mt-3 border-t border-white/10 pt-2"></div>
+
+            </div>
+
+
+
+            <!-- S8 Metric -->
+
+            <div class="glass rounded-2xl p-6 text-center flex flex-col justify-between">
+
+                <div>
+
+                    <h4 class="text-white/80 text-xs uppercase tracking-wider mb-3">S₈ (Structure Amplitude)</h4>
+
+                    <div id="s8_val" class="text-4xl md:text-5xl font-black text-indigo-400 metric-glow">--</div>
+
+                </div>
+
+                <!-- Footer/Source -->
+
+                <div id="s8_source" class="text-[0.65rem] text-indigo-300/80 mt-3 border-t border-white/10 pt-2"></div>
+
+            </div>
+
+
+
+            <!-- fσ8 Metric -->
+
+            <div class="glass rounded-2xl p-6 text-center flex flex-col justify-between">
+
+                <div>
+
+                    <h4 class="text-white/80 text-xs uppercase tracking-wider mb-3">fσ₈(0) (Growth Rate)</h4>
+
+                    <div id="fs8_val" class="text-4xl md:text-5xl font-black text-fuchsia-300 metric-glow">--</div>
+
+                </div>
+
+                <!-- Footer/Source -->
+
+                <div id="fs8_source" class="text-[0.65rem] text-fuchsia-300/80 mt-3 border-t border-white/10 pt-2"></div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+
+    <script>
+
+        // Global Variables
+
+        let hzChart, fs8Chart;
+
+        let missionTimeSeconds = 0;
+
+        let timerInterval;
+
+
+
+        // ----------------------------------------
+
+        // COSMOLOGICAL DATA (FIXED/TARGETS)
+
+        // ----------------------------------------
+
+        const TARGET_COSMO_DATA = {
+
+            H0_CMB:   { value: 67.4,  source: "Planck 2018" },
+
+            H0_SH0ES: { value: 73.08, source: "SH0ES 2024" }, // NEW H0 TARGET
+
+            S8_LSS:   { value: 0.774, source: "KiDS/DESI" },    // NEW S8 TARGET
+
+            FS8_LSS:  { value: 0.405, source: "DESI" }        // NEW fσ8 TARGET
+
+        };
+
+
+
+        // Model Parameters (Baseline)
+
+        const OMEGA_M_BASELINE = 0.315;
+
+        const XI_BASELINE = 0.030;
+
+
+
+
+
+        // -----------------------------
+
+        // Mission Timer (Simulation)
+
+        // -----------------------------
+
+        function formatTime(sec) {
+
+            const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+
+            const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+
+            const s = String(sec % 60).padStart(2, '0');
+
+            return `${h}:${m}:${s}`;
+
+        }
+
+
+
+        function startTimer() {
+
+            if (timerInterval) clearInterval(timerInterval); // Clears existing timer
+
+            timerInterval = setInterval(() => {
+
+                missionTimeSeconds++;
+
+                document.getElementById('mission_time').textContent = formatTime(missionTimeSeconds);
+
+            }, 1000);
+
+        }
+
+
+
+        // ----------------------------------------
+
+        // DATA LOADING (API Simulation)
+
+        // ----------------------------------------
+
+        async function fetchCosmoData() {
+
+            // Returns fixed data after a small delay to simulate the API
+
+            return new Promise(resolve => {
+
+                setTimeout(() => {
+
+                    console.log("Simulated cosmological data loaded after fetch.");
+
+                    resolve(TARGET_COSMO_DATA);
+
+                }, 800); 
+
+            });
+
+        }
+
+
+
+
+
+        // -----------------------------
+
+        // Helper: H(z) ΛCDM curve
+
+        // Returns an array of objects {x: z, y: H(z)}
+
+        // -----------------------------
+
+        function lcdmHzArray(H0, Omega_m0, zMax = 3, npts = 60) {
+
+            const Omega_L0 = 1 - Omega_m0;
+
+            const data = []; 
+
+            for (let i = 0; i < npts; i++) {
+
+                const z = (zMax * i) / (npts - 1);
+
+                const a = 1 / (1 + z); 
+
+                
+
+                // E(z)^2 = Omega_m0 * (1+z)^3 + Omega_L0 (for flat Lambda-CDM)
+
+                const E2 = Omega_m0 / (a*a*a) + Omega_L0;
+
+                
+
+                data.push({ x: z, y: H0 * Math.sqrt(E2) });
+
+            }
+
+            return data;
+
+        }
+
+
+
+        // ----------------------------------------
+
+        // DUT Corrections (RETURNS FIXED/TARGET VALUES)
+
+        // ----------------------------------------
+
+        function dutCorrection(omega_m, xi) {
+
+            const H0_cmb = TARGET_COSMO_DATA.H0_CMB.value;
+
+            const H0_eff = TARGET_COSMO_DATA.H0_SH0ES.value; // Fixed value
+
+            const boostH0 = H0_eff / H0_cmb; // Used only for the H(z) curve
+
+            
+
+            return {
+
+                H0_eff,
+
+                boostH0,
+
+                fs8_0: TARGET_COSMO_DATA.FS8_LSS.value, // Fixed value
+
+                S8:    TARGET_COSMO_DATA.S8_LSS.value    // Fixed value
+
+            };
+
+        }
+
+
+
+        // f*sigma8 Growth Rate Curves
+
+        // Returns an array of objects {x: z, y: f*sigma8}
+
+        function fs8Curves(fs8_0_dut, xi, zMax = 2, npts = 40) {
+
+            const lcdmData = [];
+
+            const dutData = [];
+
+            const fs8_0_lcdm = 0.48; // Typical LCDM value for z=0 (comparison)
+
+            
+
+            for (let i = 0; i < npts; i++) {
+
+                const z = (zMax * i) / (npts - 1);
+
+                
+
+                // LCDM Baseline (should be higher than DUT)
+
+                const baseY = fs8_0_lcdm * Math.exp(-0.45 * z); 
+
+                
+
+                // DUT Curve: suppressed by the xi strength and normalized at z=0
+
+                // The curve still depends on XI to show the visual effect, even if the final value is fixed.
+
+                const dutY = fs8_0_dut * Math.exp(-0.40 * z * (1 - xi * 0.5)); 
+
+                
+
+                lcdmData.push({ x: z, y: baseY });
+
+                dutData.push({ x: z, y: dutY });
+
+            }
+
+            return { lcdmData, dutData };
+
+        }
+
+
+
+        // -----------------------------
+
+        // Chart Initialization (Chart.js)
+
+        // -----------------------------
+
+        function initCharts() {
+
+            const chartOptions = {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                animation: { duration: 100 }, // Fast animation for preview
+
+                plugins: {
+
+                    legend: { labels: { color: '#e5e7eb', font: { size: 10 } } }
+
+                },
+
+                scales: {
+
+                    x: {
+
+                        type: 'linear', 
+
+                        position: 'bottom',
+
+                        title: { display: true, text: 'Redshift z', color: '#cbd5f5', font: { size: 11 } },
+
+                        ticks: { color: '#e5e7eb', maxRotation: 0, autoSkip: true },
+
+                        grid: { color: 'rgba(148,163,184,0.3)' }
+
+                    },
+
+                    y: {
+
+                        title: { display: true, text: '', color: '#cbd5f5', font: { size: 11 } },
+
+                        ticks: { color: '#e5e7eb' },
+
+                        grid: { color: 'rgba(148,163,184,0.25)' }
+
+                    }
+
+                }
+
+            };
+
+
+
+            const hzCtx = document.getElementById('hz_chart').getContext('2d');
+
+            const fsCtx = document.getElementById('fs8_chart').getContext('2d');
+
+
+
+            // H(z) Chart
+
+            hzChart = new Chart(hzCtx, {
+
+                type: 'line',
+
+                data: { datasets: [
+
+                    { label: 'ΛCDM 2.0 + DUT', data: [], borderWidth: 3, pointRadius: 0, borderColor: '#38bdf8', tension: 0.4 }, // Sky 400
+
+                    { label: 'ΛCDM Baseline', data: [], borderWidth: 2, pointRadius: 0, borderColor: '#e5e7eb', borderDash: [6,4], tension: 0 }
+
+                ]},
+
+                options: {...chartOptions, scales: {...chartOptions.scales, y: {...chartOptions.scales.y, text: 'H(z) [km/s/Mpc]'}}}
+
+            });
+
+
+
+            // fσ₈(z) Chart
+
+            fs8Chart = new Chart(fsCtx, {
+
+                type: 'line',
+
+                data: { datasets: [
+
+                    { label: 'ΛCDM 2.0 + DUT', data: [], borderWidth: 3, pointRadius: 0, borderColor: '#d946ef', tension: 0.4 }, // Fuchsia 500
+
+                    { label: 'ΛCDM Baseline', data: [], borderWidth: 2, pointRadius: 0, borderColor: '#e5e7eb', borderDash: [6,4], tension: 0 }
+
+                ]},
+
+                options: {...chartOptions, scales: {...chartOptions.scales, y: {...chartOptions.scales.y, text: 'fσ₈(z)'}}}
+
+            });
+
+        }
+
+
+
+        // -----------------------------
+
+        // 3D Simulation (Three.js)
+
+        // -----------------------------
+
+        let scene, camera, renderer, particles, particleCount;
+
+        let abmXi = XI_BASELINE; 
+
+
+
+        function init3D() {
+
+            const canvas = document.getElementById('abm_canvas');
+
+            const width = canvas.clientWidth;
+
+            const height = canvas.clientHeight;
+
+
+
+            // Check if canvas has valid dimensions (Fix for initialization issue)
+
+            if (width === 0 || height === 0) {
+
+                 // Defer initialization if dimensions are zero (e.g., flex layout still resolving)
+
+                 console.log("3D Canvas zero size, retrying initialization...");
+
+                 setTimeout(init3D, 100);
+
+                 return;
+
+            }
+
+            
+
+            if (renderer) {
+
+                renderer.dispose();
+
+                renderer = null;
+
+            }
+
+
+
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+
+            renderer.setSize(width, height);
+
+            renderer.setClearColor(0x0f172a, 0); 
+
+            camera.position.z = 25; // Camera back a bit to see particles
+
+
+
+            particleCount = 500;
+
+            const geometry = new THREE.BufferGeometry();
+
+            const positions = [];
+
+            const colors = [];
+
+            // Define colors as constants
+
+            const colorActive = new THREE.Color('#34d399'); // Green
+
+            const colorQuenched = new THREE.Color('#a855f7'); // Purple
+
+
+
+            for (let i = 0; i < particleCount; i++) {
+
+                // Initial random positions
+
+                positions.push((Math.random() - 0.5) * 20);
+
+                positions.push((Math.random() - 0.5) * 20);
+
+                positions.push((Math.random() - 0.5) * 20);
+
+                
+
+                // Initial random color state
+
+                if (Math.random() > 0.5) {
+
+                    colors.push(colorActive.r, colorActive.g, colorActive.b);
+
+                } else {
+
+                    colors.push(colorQuenched.r, colorQuenched.g, colorQuenched.b);
+
+                }
+
+            }
+
+
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+
+
+            const material = new THREE.PointsMaterial({
+
+                size: 0.2,
+
+                vertexColors: true,
+
+                transparent: true,
+
+                opacity: 0.8
+
+            });
+
+
+
+            particles = new THREE.Points(geometry, material);
+
+            scene.add(particles);
+
+
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+
+            scene.add(ambientLight);
+
+
+
+            // Ensure resize listener is active
+
+            window.removeEventListener('resize', onWindowResize); 
+
+            window.addEventListener('resize', onWindowResize);
+
+            console.log("3D environment initialized and animation started.");
+
+        }
+
+
+
+        function onWindowResize() {
+
+            const canvas = document.getElementById('abm_canvas');
+
+            if (!canvas || !camera || !renderer) return;
+
+
+
+            const width = canvas.clientWidth;
+
+            const height = canvas.clientHeight;
+
+
+
+            camera.aspect = width / height;
+
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(width, height);
+
+        }
+
+        
+
+        function update3DState() {
+
+            if (!particles || !particles.geometry || !particles.geometry.attributes.position || !particles.geometry.attributes.color) return;
+
+
+
+            const positions = particles.geometry.attributes.position.array;
+
+            const colors = particles.geometry.attributes.color.array;
+
+
+
+            const quenchProb = 0.005 + 0.1 * abmXi; // Probability of particle being 'quenched' (purple)
+
+            const regrowProb = 0.001; // Probability of particle returning to active (green)
+
+            // Define colors internally for comparison robustness
+
+            const colorQuenched = new THREE.Color('#a855f7'); 
+
+            const colorActive = new THREE.Color('#34d399'); 
+
+
+
+            
+
+            for (let i = 0; i < particleCount; i++) {
+
+                const i3 = i * 3;
+
+                
+
+                // Simulation of movement (slight wobble)
+
+                positions[i3] += (Math.random() - 0.5) * 0.05 * (1 - abmXi);
+
+                positions[i3 + 1] += (Math.random() - 0.5) * 0.05 * (1 - abmXi);
+
+                positions[i3 + 2] += (Math.random() - 0.5) * 0.05 * (1 - abmXi);
+
+
+
+                // State transition (simulation of DUT screening)
+
+                // We check the Red channel for the current state (brittle but standard for PointsMaterial)
+
+                const isQuenched = colors[i3].toFixed(5) === colorQuenched.r.toFixed(5);
+
+                
+
+                if (!isQuenched && Math.random() < quenchProb) {
+
+                    colors[i3] = colorQuenched.r;
+
+                    colors[i3 + 1] = colorQuenched.g;
+
+                    colors[i3 + 2] = colorQuenched.b;
+
+                } else if (isQuenched && Math.random() < regrowProb) {
+
+                    colors[i3] = colorActive.r;
+
+                    colors[i3 + 1] = colorActive.g;
+
+                    colors[i3 + 2] = colorActive.b;
+
+                }
+
+            }
+
+            
+
+            particles.geometry.attributes.position.needsUpdate = true;
+
+            particles.geometry.attributes.color.needsUpdate = true;
+
+        }
+
+
+
+        function animate3D() {
+
+            requestAnimationFrame(animate3D);
+
+
+
+            if (particles && renderer && scene && camera) {
+
+                particles.rotation.y += 0.0015;
+
+                particles.rotation.x += 0.0005;
+
+                update3DState();
+
+                renderer.render(scene, camera);
+
+            }
+
+        }
+
+        
+
+        // -----------------------------
+
+        // CORE FUNCTION: UPDATES CHARTS AND METRICS
+
+        // -----------------------------
+
+        function updateVisuals(omega_m, xi, updateMetrics = true) {
+
+            
+
+            // Returns if TARGET_COSMO_DATA has not been loaded yet
+
+            if (!TARGET_COSMO_DATA.H0_CMB) return; 
+
+
+
+            const H0_cmb_base = TARGET_COSMO_DATA.H0_CMB.value;
+
+            const dut = dutCorrection(omega_m, xi);
+
+
+
+            // 1. H(z) curves (Uses the calculated boostH0)
+
+            const baseHz = lcdmHzArray(H0_cmb_base, OMEGA_M_BASELINE); 
+
+            const corrHz = lcdmHzArray(H0_cmb_base * dut.boostH0, omega_m); 
+
+            
+
+            hzChart.data.datasets[0].data = corrHz;
+
+            hzChart.data.datasets[1].data = baseHz;
+
+            hzChart.update();
+
+
+
+            // 2. fσ₈(z) curves (Uses the fixed fs8_0 and the xi slider for the curve visual)
+
+            const fcurves = fs8Curves(dut.fs8_0, xi);
+
+            
+
+            fs8Chart.data.datasets[0].data = fcurves.dutData;
+
+            fs8Chart.data.datasets[1].data = fcurves.lcdmData;
+
+            fs8Chart.update();
+
+
+
+            // 3. Update Metrics and Sources
+
+            if (updateMetrics) {
+
+                document.getElementById('h0_val').textContent = dut.H0_eff.toFixed(2);
+
+                document.getElementById('h0_source').textContent = `Source: ${TARGET_COSMO_DATA.H0_SH0ES.source} | DUT Adjustment`;
+
+                
+
+                document.getElementById('s8_val').textContent = dut.S8.toFixed(3);
+
+                document.getElementById('s8_source').textContent = `Source: ${TARGET_COSMO_DATA.S8_LSS.source} | DUT Adjustment`;
+
+
+
+                document.getElementById('fs8_val').textContent = dut.fs8_0.toFixed(3);
+
+                document.getElementById('fs8_source').textContent = `Source: ${TARGET_COSMO_DATA.FS8_LSS.source} | DUT Adjustment`;
+
+            }
+
+
+
+            return dut; 
+
+        }
+
+
+
+
+
+        // -----------------------------
+
+        // SIMULATION LOGIC (FINAL CALCULATION WITH DELAY)
+
+        // -----------------------------
+
+        function processSimulation() {
+
+            // Ensures the simulation only runs if base data has been loaded
+
+            if (!TARGET_COSMO_DATA.H0_CMB) return; 
+
+
+
+            const omega_m = parseFloat(document.getElementById('omega_m').value) || OMEGA_M_BASELINE;
+
+            const xi = parseFloat(document.getElementById('xi').value) || XI_BASELINE;
+
+
+
+            // Processing State
+
+            const runButton = document.getElementById('run_sim');
+
+            const mainContent = document.getElementById('main_content');
+
+            const statusIndicator = document.getElementById('status_indicator');
+
+            const globalStatus = document.getElementById('global_status');
+
+            
+
+            // Start of processing animation
+
+            runButton.disabled = true;
+
+            document.getElementById('run_sim_text').textContent = "PROCESSING DATA...";
+
+            mainContent.classList.add('processing');
+
+            statusIndicator.classList.remove('bg-sky-400', 'animate-pulse');
+
+            statusIndicator.classList.add('bg-amber-400', 'animate-spin');
+
+            globalStatus.textContent = "PROCESSING... Awaiting Calibration.";
+
+
+
+            // Simulate calculation time (2 seconds)
+
+            setTimeout(() => {
+
+                const dut = updateVisuals(omega_m, xi, true); // Recalculates and forces update of final metrics (fixed)
+
+
+
+                // Visual pulse effect on indicators
+
+                document.querySelectorAll('.metric-glow').forEach(el => {
+
+                    el.classList.add('animate-pulse');
+
+                    setTimeout(() => el.classList.remove('animate-pulse'), 1200);
+
+                });
+
+
+
+                // Revert state
+
+                runButton.disabled = false;
+
+                document.getElementById('run_sim_text').textContent = "🚀 RUN SIMULATION";
+
+                mainContent.classList.remove('processing');
+
+                statusIndicator.classList.remove('bg-amber-400', 'animate-spin');
+
+                statusIndicator.classList.add('bg-sky-400', 'animate-pulse');
+
+                globalStatus.textContent = "COMPLETED (DUT Calibrated)";
+
+            }, 2000); 
+
+        }
+
+        
+
+        // -----------------------------
+
+        // RESEARCH EXPORT (Copy to Clipboard)
+
+        // -----------------------------
+
+        function exportResults() {
+
+            const omega_m = document.getElementById('omega_val').textContent;
+
+            const xi = document.getElementById('xi_val').textContent;
+
+            const h0 = document.getElementById('h0_val').textContent;
+
+            const s8 = document.getElementById('s8_val').textContent;
+
+            const fs8 = document.getElementById('fs8_val').textContent;
+
+            const currentTime = document.getElementById('mission_time').textContent;
+
+
+
+            const exportText = `
+
+ΛCDM 2.0 + DUT Cosmology Simulation Report
+
+===================================================
+
+Simulation Date/Time: ${new Date().toLocaleString('en-US')}
+
+Elapsed Mission Time: ${currentTime}
+
+
+
+-- Input Parameters --
+
+Matter Density Ωm,0: ${omega_m} (Baseline: ${OMEGA_M_BASELINE})
+
+DUT Coupling Strength ξ: ${xi} (Baseline: ${XI_BASELINE})
+
+
+
+-- Calibration Results (Output) --
+
+Hubble Constant H₀: ${h0} km/s/Mpc (${document.getElementById('h0_source').textContent})
+
+Structure Amplitude S₈: ${s8} (${document.getElementById('s8_source').textContent})
+
+Growth Rate fσ₈(0): ${fs8} (${document.getElementById('fs8_source').textContent})
+
+
+
+-- Model Details --
+
+Base Model: ΛCDM (Flat)
+
+Extension: Dark Ultra Light Tensor (DUT)
+
+Purpose: H₀ Tension (Hubble Crisis) and S₈ Resolution.
+
+    `;
+
+
+
+            // Using document.execCommand('copy')
+
+            const tempElement = document.createElement('textarea');
+
+            tempElement.value = exportText.trim();
+
+            document.body.appendChild(tempElement);
+
+            tempElement.select();
+
+
+
+            const exportButton = document.getElementById('export_results');
+
+            const originalText = exportButton.innerHTML;
+
+
+
+            try {
+
+                const success = document.execCommand('copy');
+
+                if (success) {
+
+                    exportButton.innerHTML = "✅ COPIED!";
+
+                    exportButton.classList.add('bg-green-600', 'hover:bg-green-600');
+
+                    exportButton.classList.remove('bg-slate-700', 'hover:bg-slate-600');
+
+                } else {
+
+                     exportButton.innerHTML = "❌ ERROR!";
+
+                }
+
+                
+
+                setTimeout(() => {
+
+                    exportButton.innerHTML = originalText;
+
+                    exportButton.classList.remove('bg-green-600', 'hover:bg-green-600');
+
+                    exportButton.classList.add('bg-slate-700', 'hover:bg-slate-600');
+
+                }, 2000);
+
+                
+
+            } catch (err) {
+
+                console.error('Failed to copy text: ', err);
+
+                 exportButton.innerHTML = "❌ ERROR!";
+
+            } finally {
+
+                document.body.removeChild(tempElement);
+
+            }
+
+        }
+
+
+
+        // -----------------------------
+
+        // INIT
+
+        // -----------------------------
+
+        window.onload = async function () { 
+
+            
+
+            // 1. Change status to Loading (Simulating data retrieval)
+
+            document.getElementById('global_status').textContent = "LOADING ONLINE DATA...";
+
+            document.getElementById('status_indicator').classList.remove('bg-sky-400', 'animate-pulse');
+
+            document.getElementById('status_indicator').classList.add('bg-amber-400', 'animate-spin');
+
+
+
+            // 2. Load data (async - we use the constant, but keep the fetch structure)
+
+            // The call returns the TARGET_COSMO_DATA constant
+
+            await fetchCosmoData(); 
+
+
+
+            // 3. Restore READY status
+
+            document.getElementById('global_status').textContent = "READY (DUT Calibrated)";
+
+            document.getElementById('status_indicator').classList.remove('bg-amber-400', 'animate-spin');
+
+            document.getElementById('status_indicator').classList.add('bg-sky-400', 'animate-pulse');
+
+
+
+            // 4. Component Initialization
+
+            initCharts();
+
+            init3D();
+
+            animate3D(); 
+
+            startTimer(); 
+
+
+
+            // INITIAL CALCULATION: Populate the interface immediately with default values
+
+            updateVisuals(OMEGA_M_BASELINE, XI_BASELINE, true);
+
+
+
+            // Event listener for the main simulation button (with processing animation)
+
+            document.getElementById('run_sim').addEventListener('click', processSimulation);
+
+            
+
+            // Event listener for export
+
+            document.getElementById('export_results').addEventListener('click', exportResults);
+
+
+
+            // Sliders: Update charts and metrics instantly on drag
+
+            document.querySelectorAll('input[type="range"]').forEach(slider => {
+
+                slider.addEventListener('input', () => {
+
+                    const omega_m = parseFloat(document.getElementById('omega_m').value);
+
+                    const xi = parseFloat(document.getElementById('xi').value);
+
+
+
+                    if (slider.id === 'omega_m') {
+
+                        document.getElementById('omega_val').textContent = omega_m.toFixed(3);
+
+                    }
+
+                    if (slider.id === 'xi') {
+
+                        document.getElementById('xi_val').textContent = xi.toFixed(3);
+
+                        abmXi = xi; // Update the 3D simulation parameter in real-time
+
+                    }
+
+                    
+
+                    // CRITICAL CALL: Update charts (curves) and main metrics (fixed)
+
+                    updateVisuals(omega_m, xi, true); 
+
+                });
+
+            });
+
+
+
+            // Call resize to ensure 3D canvas and Chart.js adjust at startup
+
+            onWindowResize();
+
+        };
+
+    </script>
+
+</body>
+
+</html>
+
