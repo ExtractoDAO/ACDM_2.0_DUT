@@ -22,6 +22,14 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
+    <script>
+fetch('https://api.countapi.xyz/hit/ninjasupreme2025/visits')
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById('live_count').textContent = data.value;
+  });
+</script>
+
     <style>
 
         :root {
@@ -58,7 +66,7 @@
 
         }
 
-        .metric-glow { 
+        .metric-glow {
 
             text-shadow: 0 0 15px var(--primary-color), 0 0 30px rgba(56, 189, 248, 0.6);
 
@@ -96,7 +104,7 @@
 
 <body class="min-h-screen p-4 md:p-8">
 
-    
+
 
     <!-- HEADER -->
 
@@ -158,13 +166,13 @@
 
     <main id="main_content" class="max-w-7xl mx-auto space-y-6">
 
-        
+
 
         <!-- 1. VISUALIZATION BLOCK (3D + CHARTS) - HIGH PRIORITY -->
 
         <section class="grid grid-cols-1 xl:grid-cols-5 gap-6">
 
-            
+
 
             <!-- 3D Panel and Parameters (xl:col-span-3) -->
 
@@ -274,7 +282,7 @@
 
                             </button>
 
-                            
+
 
                             <button id="export_results"
 
@@ -340,7 +348,7 @@
 
         <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
 
-            
+
 
             <!-- H0 Metric -->
 
@@ -504,7 +512,7 @@
 
                     resolve(TARGET_COSMO_DATA);
 
-                }, 800); 
+                }, 800);
 
             });
 
@@ -526,21 +534,21 @@
 
             const Omega_L0 = 1 - Omega_m0;
 
-            const data = []; 
+            const data = [];
 
             for (let i = 0; i < npts; i++) {
 
                 const z = (zMax * i) / (npts - 1);
 
-                const a = 1 / (1 + z); 
+                const a = 1 / (1 + z);
 
-                
+
 
                 // E(z)^2 = Omega_m0 * (1+z)^3 + Omega_L0 (for flat Lambda-CDM)
 
                 const E2 = Omega_m0 / (a*a*a) + Omega_L0;
 
-                
+
 
                 data.push({ x: z, y: H0 * Math.sqrt(E2) });
 
@@ -566,7 +574,7 @@
 
             const boostH0 = H0_eff / H0_cmb; // Used only for the H(z) curve
 
-            
+
 
             return {
 
@@ -596,27 +604,27 @@
 
             const fs8_0_lcdm = 0.48; // Typical LCDM value for z=0 (comparison)
 
-            
+
 
             for (let i = 0; i < npts; i++) {
 
                 const z = (zMax * i) / (npts - 1);
 
-                
+
 
                 // LCDM Baseline (should be higher than DUT)
 
-                const baseY = fs8_0_lcdm * Math.exp(-0.45 * z); 
+                const baseY = fs8_0_lcdm * Math.exp(-0.45 * z);
 
-                
+
 
                 // DUT Curve: suppressed by the xi strength and normalized at z=0
 
                 // The curve still depends on XI to show the visual effect, even if the final value is fixed.
 
-                const dutY = fs8_0_dut * Math.exp(-0.40 * z * (1 - xi * 0.5)); 
+                const dutY = fs8_0_dut * Math.exp(-0.40 * z * (1 - xi * 0.5));
 
-                
+
 
                 lcdmData.push({ x: z, y: baseY });
 
@@ -656,7 +664,7 @@
 
                     x: {
 
-                        type: 'linear', 
+                        type: 'linear',
 
                         position: 'bottom',
 
@@ -740,7 +748,7 @@
 
         let scene, camera, renderer, particles, particleCount;
 
-        let abmXi = XI_BASELINE; 
+        let abmXi = XI_BASELINE;
 
 
 
@@ -768,7 +776,7 @@
 
             }
 
-            
+
 
             if (renderer) {
 
@@ -788,7 +796,7 @@
 
             renderer.setSize(width, height);
 
-            renderer.setClearColor(0x0f172a, 0); 
+            renderer.setClearColor(0x0f172a, 0);
 
             camera.position.z = 25; // Camera back a bit to see particles
 
@@ -820,7 +828,7 @@
 
                 positions.push((Math.random() - 0.5) * 20);
 
-                
+
 
                 // Initial random color state
 
@@ -872,7 +880,7 @@
 
             // Ensure resize listener is active
 
-            window.removeEventListener('resize', onWindowResize); 
+            window.removeEventListener('resize', onWindowResize);
 
             window.addEventListener('resize', onWindowResize);
 
@@ -904,7 +912,7 @@
 
         }
 
-        
+
 
         function update3DState() {
 
@@ -924,19 +932,19 @@
 
             // Define colors internally for comparison robustness
 
-            const colorQuenched = new THREE.Color('#a855f7'); 
+            const colorQuenched = new THREE.Color('#a855f7');
 
-            const colorActive = new THREE.Color('#34d399'); 
+            const colorActive = new THREE.Color('#34d399');
 
 
 
-            
+
 
             for (let i = 0; i < particleCount; i++) {
 
                 const i3 = i * 3;
 
-                
+
 
                 // Simulation of movement (slight wobble)
 
@@ -954,7 +962,7 @@
 
                 const isQuenched = colors[i3].toFixed(5) === colorQuenched.r.toFixed(5);
 
-                
+
 
                 if (!isQuenched && Math.random() < quenchProb) {
 
@@ -976,7 +984,7 @@
 
             }
 
-            
+
 
             particles.geometry.attributes.position.needsUpdate = true;
 
@@ -1006,7 +1014,7 @@
 
         }
 
-        
+
 
         // -----------------------------
 
@@ -1016,11 +1024,11 @@
 
         function updateVisuals(omega_m, xi, updateMetrics = true) {
 
-            
+
 
             // Returns if TARGET_COSMO_DATA has not been loaded yet
 
-            if (!TARGET_COSMO_DATA.H0_CMB) return; 
+            if (!TARGET_COSMO_DATA.H0_CMB) return;
 
 
 
@@ -1032,11 +1040,11 @@
 
             // 1. H(z) curves (Uses the calculated boostH0)
 
-            const baseHz = lcdmHzArray(H0_cmb_base, OMEGA_M_BASELINE); 
+            const baseHz = lcdmHzArray(H0_cmb_base, OMEGA_M_BASELINE);
 
-            const corrHz = lcdmHzArray(H0_cmb_base * dut.boostH0, omega_m); 
+            const corrHz = lcdmHzArray(H0_cmb_base * dut.boostH0, omega_m);
 
-            
+
 
             hzChart.data.datasets[0].data = corrHz;
 
@@ -1050,7 +1058,7 @@
 
             const fcurves = fs8Curves(dut.fs8_0, xi);
 
-            
+
 
             fs8Chart.data.datasets[0].data = fcurves.dutData;
 
@@ -1068,7 +1076,7 @@
 
                 document.getElementById('h0_source').textContent = `Source: ${TARGET_COSMO_DATA.H0_SH0ES.source} | DUT Adjustment`;
 
-                
+
 
                 document.getElementById('s8_val').textContent = dut.S8.toFixed(3);
 
@@ -1084,7 +1092,7 @@
 
 
 
-            return dut; 
+            return dut;
 
         }
 
@@ -1102,7 +1110,7 @@
 
             // Ensures the simulation only runs if base data has been loaded
 
-            if (!TARGET_COSMO_DATA.H0_CMB) return; 
+            if (!TARGET_COSMO_DATA.H0_CMB) return;
 
 
 
@@ -1122,7 +1130,7 @@
 
             const globalStatus = document.getElementById('global_status');
 
-            
+
 
             // Start of processing animation
 
@@ -1174,11 +1182,11 @@
 
                 globalStatus.textContent = "COMPLETED (DUT Calibrated)";
 
-            }, 2000); 
+            }, 2000);
 
         }
 
-        
+
 
         // -----------------------------
 
@@ -1280,7 +1288,7 @@ Purpose: H₀ Tension (Hubble Crisis) and S₈ Resolution.
 
                 }
 
-                
+
 
                 setTimeout(() => {
 
@@ -1292,7 +1300,7 @@ Purpose: H₀ Tension (Hubble Crisis) and S₈ Resolution.
 
                 }, 2000);
 
-                
+
 
             } catch (err) {
 
@@ -1316,9 +1324,9 @@ Purpose: H₀ Tension (Hubble Crisis) and S₈ Resolution.
 
         // -----------------------------
 
-        window.onload = async function () { 
+        window.onload = async function () {
 
-            
+
 
             // 1. Change status to Loading (Simulating data retrieval)
 
@@ -1334,7 +1342,7 @@ Purpose: H₀ Tension (Hubble Crisis) and S₈ Resolution.
 
             // The call returns the TARGET_COSMO_DATA constant
 
-            await fetchCosmoData(); 
+            await fetchCosmoData();
 
 
 
@@ -1354,9 +1362,9 @@ Purpose: H₀ Tension (Hubble Crisis) and S₈ Resolution.
 
             init3D();
 
-            animate3D(); 
+            animate3D();
 
-            startTimer(); 
+            startTimer();
 
 
 
@@ -1370,7 +1378,7 @@ Purpose: H₀ Tension (Hubble Crisis) and S₈ Resolution.
 
             document.getElementById('run_sim').addEventListener('click', processSimulation);
 
-            
+
 
             // Event listener for export
 
@@ -1404,11 +1412,11 @@ Purpose: H₀ Tension (Hubble Crisis) and S₈ Resolution.
 
                     }
 
-                    
+
 
                     // CRITICAL CALL: Update charts (curves) and main metrics (fixed)
 
-                    updateVisuals(omega_m, xi, true); 
+                    updateVisuals(omega_m, xi, true);
 
                 });
 
